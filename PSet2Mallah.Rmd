@@ -3,27 +3,128 @@ title: "PSet2 Mallah"
 output: html_document
 date: "2024-01-28"
 ---
+```{r}
+library(tidyverse)
+library(knitr)
+library(reader)
+library(tibble)
+library(dplyr)
+library(gapminder)
+```
 
+Answer 1: https://github.com/maveenmm/PSet2.git  
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  eval = TRUE, 
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  fig.align = 'center' 
+)
 ```
 
-## R Markdown
+Answer 2: See corrections below
+```{r}
+library(tidyverse) 
+# open my data
+gspace = read_csv('greenspace_data_share.csv') #missing quotations
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# summarize average urban greenspace by region  
+  table = 
+  gspace |>
+  group_by(Major_Geo_Region) |>
+  summarise(
+    obs = n(), #missing comma
+    avg = mean(annual_avg_2020, na.rm = TRUE), #missing underscore #added na.rm = TRUE
+    'weighted_avg' = mean(annual_weight_avg_2020, na.rm = TRUE) #missing underscore #missing quotations #added na.rm = TRUE
+    )  |>
+      rename("Weighted Average" = weighted_avg, "Major Geographical Region" = Major_Geo_Region, "Urban Areas" = obs, "Average" = avg)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+# output as table
+kable(table, digits = 1L #missing L
+)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Answer 3: The greenspace data covers 1038 urban areas 
+```{r}
+length(gspace$City)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Answer 4: This table shows the distribution of urban areas in 2021 based on their classification. The most common classification is "Low", with 394 urban areas. There are also a significant number of urban areas classified as "Very Low" (265) and "Moderate" (215). Fewer urban areas are classified as "Exceptionally Low" (100), "High" (62), and "Very High" (1). There is also one urban area with missing data, which is classified as "NA".
+```{r}
+library(knitr)
+answer4 = 
+  gspace |>
+count(indicator_2021) |>
+rename("2021 Greenspace Classification" = indicator_2021, "Urban Areas" = n)
+kable(answer4)
+```
+
+Answer 5a:69 urban areas scored High or above for greenspace in 2015 
+```{r}
+sum(gspace$peak_NDVI_2015 >=0.5)
+```
+
+Answer 5b: 71 urban areas scored Exceptionally Low at any point in the years covered 
+```{r}
+library(dplyr)
+answer5b= gspace|>
+  filter(indicator_2010 =="Exceptionally Low", 
+         indicator_2015=="Exceptionally Low",  
+         indicator_2020=="Exceptionally Low",
+         indicator_2021=="Exceptionally Low") |>
+summarise(obs = n())
+print(answer5b)
+```
+
+Answer 5c: 225 urban areas in arid climate became green from 2010 to 2020
+```{r}
+library(dplyr)
+library(knitr)
+answer5c = gspace |>
+  filter(Climate_region == "Arid") |>
+  mutate(green = ifelse(annual_weight_avg_2020 - annual_weight_avg_2010 > 0, 'increase', 'decrease')
+  )
+increase = sum(answer5c$green == 'increase')
+decrease = sum(answer5c$green == 'decrease')
+table(increase, decrease)
+```
+
+Answer 6: 128 urban areas became less green from 2010 to 2021
+```{r} 
+answer6 = gspace |>
+  mutate(
+    green = ifelse(annual_avg_2021 - annual_avg_2010 > 0, 'increase', 'decrease')
+  )
+table(answer6$green)
+```
+
+Answer 7: See hisotrgram of change in greenspace from 2010 to 2021 
+```{r} 
+gspace = gspace |>
+  mutate(
+    change = annual_avg_2021 - annual_avg_2010
+  )
+hist(gspace$change, main = "Change in Greenspace (2010 to 2021)", xlab = "Change in Annual Average Greenspace", col='pink')
+```
+
+Answer 8 + Extra Credit: See scatter plot of population weighted greenspace in 2021 over greenspace in 2010 below 
+```{r} 
+gspace = gspace |>
+  mutate(
+    change = annual_weight_avg_2021 - annual_weight_avg_2010
+  )
+
+plot(
+  gspace$annual_weight_avg_2010,
+  gspace$annual_weight_avg_2021,
+  main = "Weighted Greenspace Population 2021 vs 2010",
+  xlab = "2010",
+  ylab = "2021",
+  col = ifelse(gspace$change < 0, "red", "blue")
+)
+abline(a = 0, b = 1, lwd = 3, lty = 4, col = "purple")
+```
+
+
